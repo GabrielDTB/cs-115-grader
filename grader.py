@@ -8,6 +8,8 @@ import subprocess
 from zipfile import ZipFile
 import sys
 
+TIMEOUT = 60
+
 working_directory = "autograder"
 submissions_directory = working_directory+"/submissions"
 testing_directory = working_directory+"/testing"
@@ -36,6 +38,11 @@ if __name__ == "__main__":
     starter = sys.argv[1]
     terminator = sys.argv[2]
     init_directories()
+    for filename in scandir("required"):
+        if not filename.is_file():
+            continue
+        filename = basename(filename)
+        copy("required/" + filename, testing_directory + "/" + filename)
     with ZipFile("submissions.zip") as submissions:
         submissions.extractall(path=submissions_directory)
         
@@ -45,6 +52,10 @@ if __name__ == "__main__":
     target_name = None
     with open(testing_directory+"/test.py") as test:
         for line in test:
+            if "from" in line and "import" in line:
+                line = line.split("from")[1]
+                line = line.split("import")[0]
+                target_name = line.strip()
             if "import" in line and "as" in line:
                 line = line.split("import")[1]
                 line = line.split("as")[0]
@@ -92,7 +103,7 @@ if __name__ == "__main__":
         results[filename] = {}
         results[filename]["pledge"] = pledge
         try:
-            output = subprocess.run("python test.py", shell=True, cwd=testing_directory, capture_output=True, timeout=60).stderr.decode("utf-8")
+            output = subprocess.run("python test.py", shell=True, cwd=testing_directory, capture_output=True, timeout=TIMEOUT).stderr.decode("utf-8")
             results[filename]["output"] = output
         except Exception as e:
             results[filename]["output"] = e
